@@ -1,0 +1,5 @@
+# Round 1, slot A (GlaS ladder, split 2981, 400 ep). SPEC_v1 §8.
+glas_v1_full_2981        glas  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective
+glas_v1_ctrl_fusion_2981 glas  --dataseed 2981 --use_ctrl --use_fusion
+glas_v1_ctrl_2981        glas  --dataseed 2981 --use_ctrl
+glas_v1_base_2981        glas  --dataseed 2981

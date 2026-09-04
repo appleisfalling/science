@@ -1,0 +1,7 @@
+# Round 2, slot B (BUSI full, then GlaS side ablations). SPEC_v1 §8.
+busi_v1_full_2981            busi  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective
+glas_v1_abst_margin_2981     glas  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective --opt abst=margin
+glas_v1_abst_none_2981       glas  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective --opt abst=none
+glas_v1_nodetail_2981        glas  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective --opt route_detail=false
+glas_v1_focus_gt_2981        glas  --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective --opt focus_src=gt
+glas_v1_ctrl_obj_2981        glas  --dataseed 2981 --use_ctrl --use_objective

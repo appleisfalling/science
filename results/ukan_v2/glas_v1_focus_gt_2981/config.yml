@@ -1,0 +1,44 @@
+arch: UKAN_V2
+batch_size: 8
+data_dir: inputs
+dataseed: 2981
+dataset: glas
+deep_supervision: false
+early_stopping: -1
+epochs: 400
+factor: 0.1
+gamma: 0.6666666666666666
+input_channels: 3
+input_h: 256
+input_list:
+- 128
+- 160
+- 256
+input_w: 256
+kan_lr: 0.01
+kan_mask: K,K,K
+kan_weight_decay: 0.0001
+lam_ctrl: 0.25
+lam_obj: 0.5
+loss: BCEDiceLoss
+lr: 0.0001
+milestones: 1,2
+min_lr: 1.0e-05
+momentum: 0.9
+n_params: 6747703
+name: glas_v1_focus_gt_2981
+nesterov: false
+no_kan: false
+num_classes: 1
+num_workers: 0
+opt:
+  focus_src: gt
+optimizer: Adam
+output_dir: /data/kimi_repro/outputs/ukan_v2
+patience: 2
+scheduler: CosineAnnealingLR
+use_context: true
+use_ctrl: true
+use_fusion: true
+use_objective: true
+weight_decay: 0.0001

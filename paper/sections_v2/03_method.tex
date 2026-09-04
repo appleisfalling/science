@@ -1,0 +1,117 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Overview}
+\label{sec:overview}
+
+Fig.~\ref{fig:architecture} gives an overview. The backbone is U-KAN~\cite{li2025ukan}. Three convolutional encoder stages produce $t_1$ ($16$ channels at $H/2$), $t_2$ ($32$ at $H/4$) and $t_3$ ($128$ at $H/8$), and two tokenised Kolmogorov--Arnold stages produce $t_4$ ($160$ at $H/16$) and the bottleneck ($256$ at $H/32$). The decoder mirrors the encoder and, at each of the four scales $s\in\{1,2,3,4\}$, fuses the upsampled decoder feature $\mathrm{up}_s$ with the skip $\mathrm{skip}_s=t_s$ by the plain sum $\mathrm{up}_s+\mathrm{skip}_s$. We leave every backbone module untouched and replace only these four sums. A \emph{commit controller} (Section~\ref{sec:controller}) reads $t_3$ once and produces a field of commitment masses; a \emph{consensus router} (Section~\ref{sec:router}) at each scale turns the two paths and the resampled masses into the fused feature; and the objective (Section~\ref{sec:objective}) adds two terms to the backbone loss. With all switches off, the model is bit-identical to U-KAN; with all switches on and freshly initialised weights, it is functionally identical to U-KAN, because every new component is the identity at initialisation.
+
+\begin{figure*}[!t]
+\centering
+\input{figures/fig01_acre_architecture}
+\caption{Overview of U-KAN + ACRE-C. (a) The U-KAN backbone is unchanged. The commit controller is formed once on the deepest convolutional feature $t_3$ and outputs a polarity logit $p$, supervised by $8\times8$ cell occupancy through $\mathcal{L}_{\mathrm{ctrl}}$, and an abstention fraction $\rho$ with no target; the commitment masses $\mathbf{m}=(m_{\mathrm{fg}},m_{\mathrm{bg}},m_a)$ follow by construction and are resampled to the four skip-fusion scales, where a consensus router replaces the plain sum $\mathrm{up}+\mathrm{skip}$. The abstention also enters the focus loss $\mathcal{L}_{\mathrm{foc}}$ under a stop-gradient. (b) One consensus router. The skip is split by a fixed binomial low-pass into $s_{\mathrm{lo}}+s_{\mathrm{hi}}$ and only the detail band receives a bounded trust $w_{\mathrm{hi}}\in(\tfrac12,\tfrac32)$, giving the base evidence $u$, which is never multiplied by a gate. Normalised convolution with a shared kernel $K_\theta$, weighted by the committed masses, yields the consensus fields $c^{+}$ (foreground voters) and $c^{-}$ (background voters); abstaining pixels do not vote. The same operator over the whole image gives $G^{\pm}$. A commit expert $f_c$ reads the pull toward the own-polarity consensus and an abstain expert $f_a$ reads the four contrasts; the abstention mass routes their outputs. With zero-initialised expert output layers and $\beta=0$ the router equals $\mathrm{up}+\mathrm{skip}$.}
+\label{fig:architecture}
+\end{figure*}
+
+\subsection{Commit Controller}
+\label{sec:controller}
+
+The controller is a small convolutional trunk on $t_3$---a $3\times3$ convolution from $128$ to $64$ channels, a depth-wise $5\times5$ convolution with dilation $2$, and a depth-wise $3\times3$ convolution, each followed by batch normalisation and GELU---and a $1\times1$ head with two output channels that is initialised to zero. The two channels are a polarity logit $p$ and an abstention logit $a$, both defined on the $H/8\times W/8$ grid of $8\times8$ input cells. From them we form
+\begin{equation}
+q=\sigma(p),\qquad \mu = 1-\lvert 2q-1\rvert,\qquad \rho=\sigma(a),\qquad m_a=\rho\,\mu,
+\label{eq:ctrl-q}
+\end{equation}
+\begin{equation}
+m_{\mathrm{fg}} = q-\tfrac12 m_a,\qquad m_{\mathrm{bg}} = (1-q)-\tfrac12 m_a .
+\label{eq:ctrl-m}
+\end{equation}
+Here $q$ answers ``does this cell belong to the object?'', $\mu\in[0,1]$ is the commitment margin that the cell could withhold, and $\rho$ is the fraction of that margin it actually withholds. The three masses are non-negative because $\tfrac12 m_a\le\tfrac12\mu\le\min(q,1-q)$, they sum to one, and their readout satisfies $m_{\mathrm{fg}}+\tfrac12 m_a\equiv q$ by identity, so the combined foreground evidence is the polarity itself and cannot drift away from it through training. At initialisation the zero head gives $q=\rho=\tfrac12$ and $\mathbf m=(\tfrac14,\tfrac14,\tfrac12)$ exactly.
+
+Two gradient properties follow from the construction. First, the controller loss (\ref{eq:lctrl}) depends on $p$ only, so $\partial\mathcal{L}_{\mathrm{ctrl}}/\partial a\equiv0$: the abstention receives gradient exclusively from the segmentation loss through the routers, and is therefore a routing variable with no target of its own. Second, the masses are not formed from $q$ itself but from $q_r=\mathrm{sg}(q)+q_{\mathrm{grad}}\,(q-\mathrm{sg}(q))$, where $\mathrm{sg}$ is the stop-gradient and $q_{\mathrm{grad}}\in[0,1]$; $q_r$ replaces $q$ in (\ref{eq:ctrl-q})--(\ref{eq:ctrl-m}) and has the same value. With the default $q_{\mathrm{grad}}=0$ every mass that enters the routers is detached from $p$, so the direct gradient $\partial\mathcal{L}_{\mathrm{seg}}/\partial p$ vanishes and the routing gradient reaches the controller through $\rho$ alone. The polarity can still move indirectly, because $p$ and $a$ share the trunk and $t_3$, which the segmentation loss trains; we therefore monitor polarity drift explicitly (Section~\ref{sec:experiments}) rather than assert its absence. The parameter $\rho$ is also the handle for three ablations that fix the abstention policy to $\rho\equiv1$ (\emph{margin}), $\rho\equiv\tfrac12$ (\emph{half}) or $\rho\equiv0$ (\emph{none}); \emph{margin} is the limiting case in which every cell withholds all of its margin, \emph{none} removes the third state altogether, and \emph{half} is the initial state frozen.
+
+\subsection{Consensus Router}
+\label{sec:router}
+
+At scale $s$ the masses are resampled to the resolution of $\mathrm{up}_s$ (average pooling for $s=4$, bilinear interpolation for $s=1,2$, identity for $s=3$, which shares the $H/8$ grid), which keeps them on the simplex and preserves the readout $q$. We write $M=(M_{\mathrm{fg}},M_{\mathrm{bg}},M_a)$ for the resampled field and drop the scale index. The router has four steps.
+
+\paragraph*{Step 1: bounded detail trust} The skip is split by a fixed $5\times5$ binomial low-pass $B$, applied to a replicate-padded skip so that it remains a convex combination at the border, into $s_{\mathrm{lo}}=B\ast\mathrm{skip}$ and $s_{\mathrm{hi}}=\mathrm{skip}-s_{\mathrm{lo}}$. Only the detail band receives a state-dependent trust,
+\begin{align}
+w_{\mathrm{hi}} &= 1+\tfrac12\tanh\!\bigl(\beta_{\mathrm{fg}}M_{\mathrm{fg}}+\beta_{\mathrm{bg}}M_{\mathrm{bg}}+\beta_{a}M_a\bigr)\in(\tfrac12,\tfrac32),\notag\\
+u &= \mathrm{up}+s_{\mathrm{lo}}+w_{\mathrm{hi}}\odot s_{\mathrm{hi}},
+\label{eq:detail}
+\end{align}
+with per-channel $\beta\in\mathbb R^{3\times C}$ initialised to zero, so that $u=\mathrm{up}+\mathrm{skip}$ at initialisation. The low-pass component can never be removed and the detail band can at most be halved or amplified by one half; $u$ is the \emph{base evidence} and is never multiplied by a gate in what follows. This step is an engineering component with known antecedents~\cite{chen2025freqfusion,park2019spade}; it is ablated separately.
+
+\paragraph*{Step 2: polarity-partitioned consensus} A single non-negative kernel per router, $K_\theta=\mathrm{softmax}(\theta)$ over $k\times k$ taps ($k=7$ at $s=1,2$ and $k=5$ at $s=3,4$; $\theta$ initialised to a log-Gaussian with $\sigma=k/4$), is applied by normalised convolution~\cite{knutsson1993normalized} with the committed masses as certainty:
+\begin{equation}
+c^{\pm}=\frac{K_\theta\ast(w^{\pm}\odot u)+\varepsilon\,u}{K_\theta\ast w^{\pm}+\varepsilon},
+\label{eq:nconv}
+\end{equation}
+with $w^{+}=M_{\mathrm{fg}}$, $w^{-}=M_{\mathrm{bg}}$ and $\varepsilon=0.05$.
+Each of $c^{+}(x)$ and $c^{-}(x)$ is a convex combination of $u$ over the window around $x$ in which a neighbour's weight is the mass it committed to foreground or to background, respectively, plus a fixed weight $\varepsilon$ on $u(x)$ itself; abstained mass contributes nothing to either field. The denominator is the committed fraction of the window, so the magnitude of the consensus does not depend on how many neighbours voted, and the $\varepsilon$ term returns $c^{\pm}\to u$ continuously where little or no mass committed. The own-polarity consensus is $c_{\mathrm{own}}=q\,c^{+}+(1-q)\,c^{-}$ with $q=M_{\mathrm{fg}}+\tfrac12M_a$.
+
+\paragraph*{Step 3: image-wide consensus} The same operator over the whole image, $G^{\pm}=\bigl(\sum_x w^{\pm}u+\varepsilon_g u\bigr)/\bigl(\sum_x w^{\pm}+\varepsilon_g\bigr)$ with $\varepsilon_g=1$, gives what committed foreground and background look like in this image; the fallback again makes the contrast $G^{\pm}-u$ vanish where no mass exists. This step adds no parameters beyond the wider input of the abstain expert and is used at all four scales.
+
+\paragraph*{Step 4: two routed experts} Two residual experts $f_c$ and $f_a$, each a $1\times1$ convolution, GELU and $1\times1$ convolution with hidden width $2C$ at $s=1,2$ and $C$ at $s=3,4$, read different views of the evidence,
+\begin{align}
+e_c &= f_c\bigl(c_{\mathrm{own}}-u\bigr),\notag\\
+e_a &= f_a\bigl([\,c^{+}-u,\;c^{-}-u,\;G^{+}-u,\;G^{-}-u\,]\bigr),
+\label{eq:experts}
+\end{align}
+and the abstention mass routes between them,
+\begin{equation}
+\mathrm{out}=u+(1-M_a)\,e_c+M_a\,e_a .
+\label{eq:route}
+\end{equation}
+A committed pixel receives a learned pull toward the consensus of its own polarity; an abstaining pixel receives the contrast between both local and both image-wide consensuses and leaves the decision to the following block. The output layers of both experts are initialised to zero, so $\mathrm{out}=u=\mathrm{up}+\mathrm{skip}$ at initialisation (maximum measured deviation from U-KAN with identical weights $8\times10^{-8}$; the unit test that verifies this is part of the released code). Thereafter, at every pixel $x$, $\lVert\mathrm{out}(x)-u(x)\rVert\le(1-M_a(x))\lVert e_c(x)\rVert+M_a(x)\lVert e_a(x)\rVert$: the departure from the base evidence is bounded by the expert residuals, whose output-layer norms we log every epoch, and by the abstention mass. The experts themselves are unconstrained. We do not claim that the router cannot alter the skip; we claim that the skip is never gated beyond the bounded detail trust of Step~1 and that the residual is observable and bounded.
+
+\subsection{Objective}
+\label{sec:objective}
+
+The backbone loss is kept as in U-KAN, $\mathcal{L}_{\mathrm{seg}}=\tfrac12\,\mathrm{BCE}(\hat y,Y)+\mathrm{Dice}(\hat y,Y)$. Two terms are added,
+\begin{equation}
+\mathcal{L}=\mathcal{L}_{\mathrm{seg}}+\lambda_c\,\mathcal{L}_{\mathrm{ctrl}}+\lambda_f\,\mathcal{L}_{\mathrm{foc}},\qquad \lambda_c=0.25,\;\lambda_f=0.5 .
+\label{eq:total}
+\end{equation}
+The \emph{commit loss} anchors the polarity to soft cell occupancy,
+\begin{equation}
+\mathcal{L}_{\mathrm{ctrl}}=\mathrm{BCE}\bigl(p,\;\mathrm{AvgPool}_{8\times8}(Y)\bigr),
+\label{eq:lctrl}
+\end{equation}
+evaluated on the logit $p$ so that, as noted above, it has no gradient with respect to the abstention. The \emph{focus loss} re-weights the segmentation cross-entropy on pixels where the label is locally mixed or the controller abstains,
+\begin{align}
+z_{\mathrm{gt}}&=1-\bigl\lvert 2\,\mathrm{AvgPool}_{15\times15}(Y)-1\bigr\rvert,\notag\\
+\omega&=\max\bigl(z_{\mathrm{gt}},\;\mathrm{sg}(\uparrow M_a)\bigr),\notag\\
+\mathcal{L}_{\mathrm{foc}}&=\frac{\sum_x \omega\,\mathrm{BCE}(\hat y,Y)}{\max\bigl(\sum_x\omega,\;\rho_f N\bigr)},
+\label{eq:lfoc}
+\end{align}
+where the pooling excludes padded positions, $\uparrow$ denotes bilinear upsampling of the abstention to the image grid, $N$ is the number of pixels in the mini-batch (the loss is computed batch-wide) and $\rho_f=0.25$. The band $z_{\mathrm{gt}}$ is a morphology-free boundary indicator that is zero on uniform $15\times15$ windows and largest where the window is half foreground; the union with the detached abstention lets the network extend the emphasis to regions it finds ambiguous, without giving the abstention a target. The floor $\rho_f N$ in the denominator caps the per-pixel weight at $\lambda_f/\rho_f=2$ times that of a plain mean cross-entropy (four times the $\tfrac12$ coefficient of the base term), so the term stays bounded relative to the base term even on images with thin targets. No distance transform, morphology, or schedule is used. Ablations replace $\omega$ by $z_{\mathrm{gt}}$ alone (\emph{focus-gt}) and remove the routers while keeping both losses (\emph{loss-only}).
+
+\subsection{Complexity and Design Principles}
+\label{sec:complexity}
+
+Table~\ref{tab:params} lists the added parameters. The controller has $76\,610$ parameters and the four routers $3\,777$, $14\,673$, $115\,609$ and $180\,345$, a total of $391\,014$ (about $6\%$ of U-KAN); the model has $6.748$\,M parameters against $6.357$\,M for the backbone. At $256\times256$ input the cost rises from $5.33$ to $6.18$\,GFLOPs ($2.65$ to $3.07$\,GMACs), an increase of $16\%$.% calflops on the training server (2026-09-03, test_unit_v2.py [i]): baseline 5.328 GFLOPs / 2.647 GMACs / 6.357M; full 6.177 GFLOPs / 3.069 GMACs / 6.748M.
+The fixed low-pass and the normalised convolutions add no parameters beyond $\theta$ and $\beta$, which are excluded from weight decay; the Kolmogorov--Arnold layers keep the backbone's learning-rate rule.
+
+\begin{table}[!t]
+\centering
+\caption{Parameters added to U-KAN by ACRE-C (input $256\times256$).}
+\label{tab:params}
+\footnotesize
+\begin{tabular}{@{}lccr@{}}
+\toprule
+Module & Width $C$ & Resolution & Params \\
+\midrule
+Commit controller (on $t_3$) & $128\to64$ & $H/8$ & 76\,610 \\
+Router $s=1$ ($k=7$, hidden $2C$) & 16 & $H/2$ & 3\,777 \\
+Router $s=2$ ($k=7$, hidden $2C$) & 32 & $H/4$ & 14\,673 \\
+Router $s=3$ ($k=5$, hidden $C$) & 128 & $H/8$ & 115\,609 \\
+Router $s=4$ ($k=5$, hidden $C$) & 160 & $H/16$ & 180\,345 \\
+\midrule
+Total added & & & 391\,014 \\
+U-KAN + ACRE-C & & & 6.748\,M \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three principles organise the design and are each tested by an ablation. (i) \emph{Identity at initialisation}: zero head, zero expert output layers and $\beta=0$ make the network equal to the backbone at the start of training, so any departure from the backbone is learned rather than imposed. (ii) \emph{Convex where it averages, bounded where it gains}: the low-pass, the consensus fields and the image-wide means are convex combinations of the evidence, the detail trust lies in $(\tfrac12,\tfrac32)$, and the only unconstrained quantities are the two expert residuals, whose output-layer norms are logged. (iii) \emph{Abstention without a target}: the third state is shaped by the segmentation loss alone, and the \emph{margin}, \emph{half} and \emph{none} policies test whether a learned abstention is better than any fixed one.

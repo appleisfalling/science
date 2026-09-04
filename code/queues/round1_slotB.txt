@@ -1,0 +1,2 @@
+# Round 1, slot B (CVC full, split 2981, 400 ep). SPEC_v1 §8.
+cvc_v1_full_2981         cvc   --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective

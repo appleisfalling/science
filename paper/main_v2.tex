@@ -1,0 +1,76 @@
+\documentclass[journal,twoside,web]{ieeecolor}
+
+\usepackage{generic}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{threeparttable}
+\usepackage[caption=false,font=footnotesize]{subfig}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{hyperref}
+\hypersetup{
+  hidelinks,
+  pdftitle={Commit or Abstain: Consensus Routing of Skip Evidence for Medical Image Segmentation},
+  pdfauthor={Anonymous},
+  pdfkeywords={abstention, evidence routing, medical image segmentation, normalized convolution, skip connections}
+}
+
+\graphicspath{{figures/}}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.08}
+
+% Every result of the redesigned model is a placeholder until the Phase-3 runs finish (SPEC_v1 §8).
+\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\markboth{Manuscript}%
+{Anonymous Author(s): Commit or Abstain: Consensus Routing of Skip Evidence for Medical Image Segmentation}
+
+\begin{document}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{10pt plus 2pt minus 4pt}
+\setlength{\abovecaptionskip}{6pt}
+
+\title{Commit or Abstain: Consensus Routing of Skip Evidence for Medical Image Segmentation}
+
+\author{Anonymous Author(s)
+\thanks{Author names, affiliations, and funding information are omitted for double-blind review.}
+\thanks{The design evaluated in this article is denoted ACRE-C (commit-or-abstain consensus routing of evidence); the code name of the model class is UKAN\_V2.}}
+
+\maketitle
+
+\begin{abstract}
+Encoder--decoder segmenters recover a high-resolution mask by adding, at every decoder scale, an upsampled decoder feature to the encoder feature of the same resolution. This addition transports target evidence, its surroundings, and undecided evidence with the same weight, leaving the decoder to separate them at the boundary. Earlier selective designs aggregate neighbours without normalising by the weight that reached a location, and give the undecided state no operational role. We treat skip fusion as a vote. A controller formed once on the deepest convolutional feature assigns each cell a polarity and an abstention; the abstention has no target and is shaped only by its usefulness for routing. At every decoder scale, commitment-weighted normalised convolution forms a foreground and a background consensus over committed neighbours, locally and image-wide, and the abstention routes the evidence to one of two small experts. Every component is the identity at initialisation; the skip is never gated. It adds $0.39$ million parameters, $16\%$ more multiply--accumulate operations and $43\%$ more inference latency, to a compact Kolmogorov--Arnold encoder--decoder. We evaluate it on ultrasound, gland histology, and two colonoscopy collections under identical splits, budgets, and seeds. Against the re-trained backbone, three-seed mean intersection over union changes by $+0.70$ on glands, $+0.62$ and $+2.10$ on the polyp collections, and $-0.45$ on ultrasound; ablations show that removing the no-decision state costs 0.7 points while fixing it to the full margin costs none: a soft third routing state, not a learned one, is what makes the routing useful.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Abstention, evidence routing, medical image segmentation, normalised convolution, skip connections.
+\end{IEEEkeywords}
+
+\input{sections_v2/01_introduction}
+\input{sections_v2/02_related_work}
+\input{sections_v2/03_method}
+% 04-06 are the v2 text; every result beyond the GlaS split-2981 run is a \TODO until Phase-3 finishes.
+\input{sections_v2/04_experiments}
+\input{sections_v2/05_discussion}
+\input{sections_v2/06_conclusion}
+
+\section*{Acknowledgment}
+The authors acknowledge the developers of the public U-KAN codebase on which the implementation builds. The experiments use the public BUSI, GlaS, CVC-ClinicDB, and Kvasir-SEG datasets; the implementation (including the initialisation-equivalence unit test), configuration files, complete training logs, and per-run evaluation outputs are publicly available at \url{https://github.com/tradeforfreedom/science}. Author-specific acknowledgments and funding information will be added before submission.
+
+\bibliographystyle{IEEEtran}
+\def\IEEEbibitemsep{0pt plus .5pt}
+\bibliography{references,references_v2_additions}
+
+\end{document}

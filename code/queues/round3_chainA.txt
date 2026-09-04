@@ -1,0 +1,4 @@
+# Round 3 chain A (runs after round2_slotA = kvasir full 2981). 12-run protocol, seeds 6142/1187. SPEC_v1 §8.
+kvasir_v1_full_6142      kvasir --dataseed 6142 --use_ctrl --use_fusion --use_context --use_objective
+kvasir_v1_full_1187      kvasir --dataseed 1187 --use_ctrl --use_fusion --use_context --use_objective
+cvc_v1_full_1187         cvc    --dataseed 1187 --use_ctrl --use_fusion --use_context --use_objective

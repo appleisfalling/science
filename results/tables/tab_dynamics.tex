@@ -1,0 +1,27 @@
+\begin{table}[!t]
+\caption{Controller Dynamics (Validation, Last-50-Epoch Means). $\Delta$BCE / $\Delta$IoU: Change of the Cell-Level Polarity BCE / IoU From Epochs 50--100 to the Last 50.}
+\label{tab:dynamics}
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Run & Cell IoU & $\Delta$BCE & $\Delta$IoU & $\bar{M}_a$ & std$(\rho)$ & max $\lVert W\rVert$ \\
+\midrule
+BUSI / full / 1187 & 56.1 & -0.046 & +15.64 & 0.07 & 0.122 & 2.94 \\
+BUSI / full / 2981 & 52.6 & -0.049 & +15.38 & 0.07 & 0.116 & 2.97 \\
+BUSI / full / 6142 & 52.2 & -0.046 & +15.62 & 0.07 & 0.125 & 3.13 \\
+GlaS / abst\_margin / 2981 & 83.2 & -0.195 & +14.74 & 0.23 & 0.000 & 1.94 \\
+GlaS / abst\_none / 2981 & 83.3 & -0.180 & +13.86 & 0.00 & 0.000 & 0.94 \\
+GlaS / ctrl / 2981 & 83.9 & -0.221 & +16.84 & 0.11 & 0.000 & -- \\
+GlaS / full / 1187 & 81.7 & -0.323 & +21.42 & 0.13 & 0.048 & 2.08 \\
+GlaS / full / 2981 & 83.2 & -0.232 & +17.02 & 0.16 & 0.068 & 2.00 \\
+GlaS / full / 6142 & 84.0 & -0.312 & +20.61 & 0.13 & 0.060 & 2.06 \\
+CVC / full / 1187 & 76.0 & -0.069 & +28.55 & 0.03 & 0.088 & 2.66 \\
+CVC / full / 2981 & 77.7 & -0.059 & +28.77 & 0.03 & 0.089 & 2.62 \\
+CVC / full / 6142 & 75.7 & -0.081 & +29.01 & 0.04 & 0.087 & 2.76 \\
+Kvasir / full / 1187 & 67.5 & -0.053 & +14.06 & 0.07 & 0.066 & 3.08 \\
+Kvasir / full / 2981 & 65.6 & -0.055 & +12.70 & 0.08 & 0.078 & 3.21 \\
+Kvasir / full / 6142 & 67.2 & -0.067 & +15.99 & 0.07 & 0.083 & 3.16 \\
+\bottomrule
+\end{tabular}
+\end{table}

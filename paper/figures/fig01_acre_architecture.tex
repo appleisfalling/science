@@ -1,0 +1,145 @@
+% fig01_v2.tex -- redrawn TikZ body for Fig. 1 (U-KAN + ACRE-C), 2026-09-04.
+% Design: (a) routers sit INSIDE the decoder column between decoder blocks, so "up" is a straight
+% vertical arrow and "skip" a straight horizontal one (no crossings); one dashed orange mass bus on
+% the far right feeds the four routers. (b) top-to-bottom pipeline, Step 1 -> Steps 2-3 -> Step 4 ->
+% out; one orange M bus on the right with short branches; u bypass on the left edge.
+% Requires only tikz libraries arrows.meta, positioning, calc (already in main_v2.tex).
+\begingroup
+\providecommand{\acresub}{}\renewcommand{\acresub}[1]{{\scriptsize #1}}
+\definecolor{acreEnc}{RGB}{225,232,242}
+\definecolor{acreEncLine}{RGB}{70,95,130}
+\definecolor{acreKan}{RGB}{236,236,236}
+\definecolor{acreCtrl}{RGB}{250,226,214}
+\definecolor{acreCtrlLine}{RGB}{170,80,45}
+\definecolor{acreRoute}{RGB}{225,240,226}
+\definecolor{acreRouteLine}{RGB}{50,110,60}
+\definecolor{acreFix}{RGB}{247,247,247}
+\definecolor{acreLoss}{RGB}{105,105,105}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    x=1cm, y=1cm,
+    font=\footnotesize,
+    >={Latex[length=1.7mm,width=1.4mm]},
+    line width=0.5pt,
+    every node/.style={inner sep=1.8pt},
+    stage/.style={draw=acreEncLine, fill=acreEnc, rounded corners=1pt, minimum width=19mm, minimum height=6.6mm, align=center},
+    kanstage/.style={draw=acreEncLine, fill=acreKan, rounded corners=1pt, minimum width=19mm, minimum height=6.6mm, align=center},
+    router/.style={draw=acreRouteLine, fill=acreRoute, rounded corners=1pt, minimum width=19mm, minimum height=5.4mm, align=center, line width=0.7pt},
+    ctrl/.style={draw=acreCtrlLine, fill=acreCtrl, rounded corners=1pt, minimum height=6.6mm, align=center},
+    block/.style={draw=black!60, fill=acreFix, rounded corners=1.5pt, align=center},
+    gblock/.style={draw=acreRouteLine, fill=acreRoute, rounded corners=1.5pt, align=center},
+    expert/.style={draw=acreRouteLine, fill=acreRoute, rounded corners=1.5pt, align=center, line width=0.8pt},
+    mass/.style={draw=acreCtrlLine, dashed, ->, line width=0.55pt},
+    lossarrow/.style={draw=acreLoss, dotted, line width=0.7pt, ->},
+    lbl/.style={font=\scriptsize, inner sep=0.8pt},
+    panel/.style={draw=black!35, rounded corners=2pt, line width=0.4pt}
+]
+% =====================================================================
+% Panel (a): U-KAN backbone; routers replace the four skip sums
+% =====================================================================
+\node[lbl, anchor=north west, font=\footnotesize\bfseries] at (-0.35, 9.72) {(a) U-KAN + ACRE-C};
+% encoder column x=0.9 (stage s at the height of router R_s), decoder column x=5.9
+\node[stage]    (e1) at (0.9, 7.8) {Conv stage 1\\[-2pt]\acresub{$t_1$: $16\,@\,H/2$}};
+\node[stage]    (e2) at (0.9, 6.0) {Conv stage 2\\[-2pt]\acresub{$t_2$: $32\,@\,H/4$}};
+\node[stage]    (e3) at (0.9, 4.2) {Conv stage 3\\[-2pt]\acresub{$t_3$: $128\,@\,H/8$}};
+\node[kanstage] (e4) at (0.9, 2.4) {KAN stage 1\\[-2pt]\acresub{$t_4$: $160\,@\,H/16$}};
+\node[kanstage] (e5) at (5.9, 1.5) {KAN stage 2\\[-2pt]\acresub{$256\,@\,H/32$, bottleneck}};
+\node[router]   (r4) at (5.9, 2.4) {Router $\mathcal{R}_4$ \acresub{($k{=}5$)}};
+\node[kanstage] (d4) at (5.9, 3.3) {Dec.\ KAN block\\[-2pt]\acresub{$160\,@\,H/16$}};
+\node[router]   (r3) at (5.9, 4.2) {Router $\mathcal{R}_3$ \acresub{($k{=}5$)}};
+\node[kanstage] (d3) at (5.9, 5.1) {Dec.\ KAN block\\[-2pt]\acresub{$128\,@\,H/8$}};
+\node[router]   (r2) at (5.9, 6.0) {Router $\mathcal{R}_2$ \acresub{($k{=}7$)}};
+\node[stage]    (d2) at (5.9, 6.9) {Dec.\ conv block\\[-2pt]\acresub{$32\,@\,H/4$}};
+\node[router]   (r1) at (5.9, 7.8) {Router $\mathcal{R}_1$ \acresub{($k{=}7$)}};
+\node[stage]    (d1) at (5.9, 8.7) {Dec.\ conv block\\[-2pt]\acresub{$16\,@\,H/2$}};
+\node[lbl] (logits) at (5.9, 9.42) {logits $\hat{Y}$};
+\node[lbl] (img)    at (0.9, 8.55) {image $X$};
+% backbone flow: encoder down, decoder up through the routers
+\draw[->] (img) -- (e1);
+\draw[->] (e1) -- (e2);  \draw[->] (e2) -- (e3);  \draw[->] (e3) -- (e4);
+\draw[->] (e4.south) |- (e5.west);
+\draw[->] (e5) -- (r4) node[lbl, midway, right=1.5pt] {up};
+\draw[->] (r4) -- (d4) node[lbl, midway, right=1.5pt] {out};
+\draw[->] (d4) -- (r3) node[lbl, midway, right=1.5pt] {up};
+\draw[->] (r3) -- (d3) node[lbl, midway, right=1.5pt] {out};
+\draw[->] (d3) -- (r2) node[lbl, midway, right=1.5pt] {up};
+\draw[->] (r2) -- (d2) node[lbl, midway, right=1.5pt] {out};
+\draw[->] (d2) -- (r1) node[lbl, midway, right=1.5pt] {up};
+\draw[->] (r1) -- (d1) node[lbl, midway, right=1.5pt] {out};
+\draw[->] (d1) -- (logits);
+% skips: straight horizontal arrows into the routers
+\foreach \i in {1,2,3,4}{
+  \draw[->] (e\i.east) -- (r\i.west) node[lbl, midway, above=0.5pt] {skip $=t_\i$};
+}
+% commit controller (formed once on t_3, left bypass), masses, and the mass bus on the right
+\node[ctrl, minimum width=19mm] (ctrl) at (0.9, 0.3) {Commit controller\\[-2pt]\acresub{$t_3\to(p,a)\to(q,\rho)$}};
+\node[ctrl, minimum width=27mm] (masses) at (4.35, 0.3) {$\mathbf{m}=(m_{\mathrm{fg}},m_{\mathrm{bg}},m_a)$\\[-2pt]\acresub{$m_a=\rho\,\mu$, \ $\mu=1-|2q-1|$}};
+\coordinate (t3a) at ($(e3.west)+(-0.3,0)$);
+\coordinate (t3b) at ($(ctrl.north)+(-0.55,0.3)$);
+\draw[->, acreCtrlLine] (e3.west) -- (t3a) -- (t3a |- t3b) -- (t3b) -- (t3b |- ctrl.north);
+\node[lbl, text=acreCtrlLine, anchor=east] at ($(t3a |- t3b)!0.5!(t3a)+(-0.03,0)$) {$t_3$};
+\draw[->, acreCtrlLine] (ctrl) -- (masses);
+\coordinate (busx) at (7.42, 0);
+\draw[mass, -] (masses.east) -- (masses.east -| busx) -- (busx |- r1.east);
+\foreach \i in {1,2,3,4}{ \draw[mass] (busx |- r\i.east) -- (r\i.east); }
+\node[lbl, text=acreCtrlLine, anchor=north, rotate=90] at (7.56, 5.1) {$\mathrm{sg}(\mathbf{m})$ resampled to $M_s$};
+% losses (dotted grey): L_ctrl on p only; L_foc reads m_a under stop-gradient; L_seg on the logits
+\node[lbl, text=acreLoss, anchor=north west] (lctrl) at (-0.35, -0.42) {$\mathcal{L}_{\mathrm{ctrl}}=\mathrm{BCE}\big(p,\ \mathrm{AvgPool}_{8\times8}(Y)\big)$ \ on $p$ only: $\rho$ has no target};
+\draw[lossarrow] (ctrl.south) -- (ctrl.south |- lctrl.north);
+\node[lbl, text=acreLoss, anchor=north west] (lfoc) at (-0.35, -0.82) {$\mathcal{L}_{\mathrm{foc}}$: pixel weight $\omega=\max\!\big(z_{\mathrm{gt}},\ \mathrm{sg}(\uparrow m_a)\big)$};
+\draw[lossarrow] ($(masses.south)+(0.9,0)$) -- ($(masses.south)+(0.9,0)$ |- lfoc.north);
+\node[lbl, text=acreLoss, anchor=west] (lseg) at (6.85, 9.42) {$\mathcal{L}_{\mathrm{seg}}$};
+\draw[lossarrow] (logits.east) -- (lseg.west);
+\draw[panel] (-0.45,-1.15) rectangle (7.95, 9.85);
+
+% =====================================================================
+% Panel (b): one consensus router, top to bottom
+% =====================================================================
+\begin{scope}[shift={(8.45,0)}]
+\node[lbl, anchor=north west, font=\footnotesize\bfseries] at (-0.3, 9.72) {(b) Consensus router $\mathcal{R}_s$ \ \mdseries($C$ channels, $H_s\times W_s$; one per scale)};
+% inputs
+\node[lbl] (skipin) at (1.4, 8.95) {$\mathrm{skip}=t_s$};
+\node[lbl, align=center] (upin) at (4.3, 8.95) {$\mathrm{up}$ \acresub{($\uparrow$ next-coarser decoder state)}};
+\node[ctrl, text width=30mm, align=center, minimum height=7mm] (M) at (8.0, 8.95) {$M=(M_{\mathrm{fg}},M_{\mathrm{bg}},M_a)$\\[-2pt]\acresub{resampled masses, $q_s=M_{\mathrm{fg}}+\tfrac12M_a$}};
+% Step 1
+\node[block, text width=68mm, align=center] (s1) at (3.5, 7.5) {%
+  \textbf{Step 1 \ bounded detail trust}\\[1pt]
+  $s_{\mathrm{lo}}=B_5\ast\mathrm{skip}$ \acresub{(fixed $5{\times}5$ binomial)}, \ $s_{\mathrm{hi}}=\mathrm{skip}-s_{\mathrm{lo}}$\\[1pt]
+  $w_{\mathrm{hi}}=1+\tfrac12\tanh(\beta^{\top}M)\in(\tfrac12,\tfrac32)$ \ \acresub{($\beta$ zero-init)}\\[1pt]
+  $u=\mathrm{up}+s_{\mathrm{lo}}+w_{\mathrm{hi}}\odot s_{\mathrm{hi}}$ \ \acresub{(base evidence, never gated)}};
+\draw[->] (skipin.south) -- (skipin.south |- s1.north);
+\draw[->] (upin.south)   -- (upin.south |- s1.north);
+% Steps 2-3
+\node[gblock, text width=83mm, align=center] (cons) at (4.65, 4.95) {%
+  \textbf{Steps 2--3 \ polarity-partitioned consensus}\\[-1pt]
+  \acresub{(weights are the committed masses; abstaining mass $M_a$ does not vote)}\\[2pt]
+  \begin{tabular}{@{}r@{\hspace{5mm}}l@{}}
+  $c^{\pm}=\dfrac{K_\theta\ast(M_{\mathrm{fg}/\mathrm{bg}}\,u)+\varepsilon\,u}{K_\theta\ast M_{\mathrm{fg}/\mathrm{bg}}+\varepsilon}$ &
+  \acresub{\shortstack[l]{Step 2: local $k{\times}k$ window\\[-1pt]$K_\theta{=}\mathrm{softmax}(\theta)$, $\varepsilon{=}0.05$}}\\[5pt]
+  $G^{\pm}=\dfrac{\sum_x M_{\mathrm{fg}/\mathrm{bg}}\,u+\varepsilon_g\,u}{\sum_x M_{\mathrm{fg}/\mathrm{bg}}+\varepsilon_g}$ &
+  \acresub{\shortstack[l]{Step 3: image-wide\\[-1pt]$\varepsilon_g{=}1$, no parameters}}
+  \end{tabular}};
+\draw[->] (s1.south) -- (s1.south |- cons.north) node[lbl, midway, right=1.5pt] {$u$};
+% Step 4: two experts
+\node[expert, text width=41mm, align=center, minimum height=13.5mm] (fa) at (2.3, 2.55) {\textbf{Step 4 \ abstain expert}\\[0pt]$e_a=f_a\big([\,c^{\pm}\!-u,\ G^{\pm}\!-u\,]\big)$\\[-1pt]\acresub{four contrasts}\\[-1pt]\acresub{$1{\times}1$--GELU--$1{\times}1$, zero-init output}};
+\node[expert, text width=41mm, align=center, minimum height=13.5mm] (fc) at (7.1, 2.55) {\textbf{Step 4 \ commit expert}\\[0pt]$e_c=f_c\big(c_{\mathrm{own}}-u\big)$\\[-1pt]\acresub{$c_{\mathrm{own}}=q_s\,c^{+}+(1-q_s)\,c^{-}$}\\[-1pt]\acresub{$1{\times}1$--GELU--$1{\times}1$, zero-init output}};
+\draw[->] (fa.north |- cons.south) -- (fa.north) node[lbl, midway, right=1.5pt] {$c^{\pm},G^{\pm}$};
+\draw[->] (fc.north |- cons.south) -- (fc.north) node[lbl, midway, right=1.5pt] {$c^{\pm}$};
+% output
+\node[block, text width=70mm, align=center, line width=0.8pt, draw=black!70] (out) at (4.7, 0.5)
+  {$\mathrm{out}=u+(1-M_a)\,e_c+M_a\,e_a$\\[-1pt]\acresub{$=\mathrm{up}+\mathrm{skip}$ at initialisation (zero-init experts, $\beta{=}0$)}};
+\draw[->] (fa.south) -- (fa.south |- out.north) node[lbl, midway, right=1.5pt] {$e_a$};
+\draw[->] (fc.south) -- (fc.south |- out.north) node[lbl, midway, right=1.5pt] {$e_c$};
+% u bypass along the left edge
+\draw[->] (s1.west) -- ++(-0.22,0) |- (out.west) node[lbl, pos=0.3, left=1pt] {$u$};
+% M bus on the right with short branches
+\coordinate (mb) at (9.7, 0);
+\draw[mass, -] (M.east) -- (M.east -| mb) -- (mb |- out.east);
+\draw[mass] (mb |- s1.east)   -- (s1.east)   node[lbl, text=acreCtrlLine, midway, above=0.5pt] {$M$};
+\draw[mass] (mb |- cons.east) -- (cons.east) node[lbl, text=acreCtrlLine, midway, above=0.5pt] {$M_{\mathrm{fg}/\mathrm{bg}}$};
+\draw[mass] (mb |- fc.east)   -- (fc.east)   node[lbl, text=acreCtrlLine, midway, above=0.5pt] {$q_s$};
+\draw[mass] (mb |- out.east)  -- (out.east)  node[lbl, text=acreCtrlLine, midway, above=0.5pt] {$M_a$};
+\draw[panel] (-0.5,-1.15) rectangle (10.0, 9.85);
+\end{scope}
+\end{tikzpicture}}%
+\endgroup

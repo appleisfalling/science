@@ -1,0 +1,2 @@
+# Round 2, slot A (Kvasir full = capacity test). SPEC_v1 §8.
+kvasir_v1_full_2981      kvasir --dataseed 2981 --use_ctrl --use_fusion --use_context --use_objective

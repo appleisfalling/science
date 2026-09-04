@@ -1,0 +1,6 @@
+# Round 3 chain B (runs after round2_slotB = busi full 2981 + GlaS side ablations). 12-run protocol, seeds 6142/1187.
+glas_v1_full_6142        glas   --dataseed 6142 --use_ctrl --use_fusion --use_context --use_objective
+glas_v1_full_1187        glas   --dataseed 1187 --use_ctrl --use_fusion --use_context --use_objective
+cvc_v1_full_6142         cvc    --dataseed 6142 --use_ctrl --use_fusion --use_context --use_objective
+busi_v1_full_6142        busi   --dataseed 6142 --use_ctrl --use_fusion --use_context --use_objective
+busi_v1_full_1187        busi   --dataseed 1187 --use_ctrl --use_fusion --use_context --use_objective
