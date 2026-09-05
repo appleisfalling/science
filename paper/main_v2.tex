@@ -30,11 +30,12 @@
 
 % Every result of the redesigned model is a placeholder until the Phase-3 runs finish (SPEC_v1 §8).
 \newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\STALE}[1]{\textcolor{red}{#1}}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
-\markboth{Manuscript}%
+\markboth{IEEE Journal of Biomedical and Health Informatics}%
 {Anonymous Author(s): Commit or Abstain: Consensus Routing of Skip Evidence for Medical Image Segmentation}
 
 \begin{document}
@@ -51,12 +52,14 @@
 \maketitle
 
 \begin{abstract}
-Encoder--decoder segmenters recover a high-resolution mask by adding, at every decoder scale, an upsampled decoder feature to the encoder feature of the same resolution. This addition transports target evidence, its surroundings, and undecided evidence with the same weight, leaving the decoder to separate them at the boundary. Earlier selective designs aggregate neighbours without normalising by the weight that reached a location, and give the undecided state no operational role. We treat skip fusion as a vote. A controller formed once on the deepest convolutional feature assigns each cell a polarity and an abstention; the abstention has no target and is shaped only by its usefulness for routing. At every decoder scale, commitment-weighted normalised convolution forms a foreground and a background consensus over committed neighbours, locally and image-wide, and the abstention routes the evidence to one of two small experts. Every component is the identity at initialisation; the skip is never gated. It adds $0.39$ million parameters, $16\%$ more multiply--accumulate operations and $43\%$ more inference latency, to a compact Kolmogorov--Arnold encoder--decoder. We evaluate it on ultrasound, gland histology, and two colonoscopy collections under identical splits, budgets, and seeds. Against the re-trained backbone, three-seed mean intersection over union changes by $+0.70$ on glands, $+0.62$ and $+2.10$ on the polyp collections, and $-0.45$ on ultrasound; ablations show that removing the no-decision state costs 0.7 points while fixing it to the full margin costs none: a soft third routing state, not a learned one, is what makes the routing useful.
+Encoder--decoder segmenters recover a high-resolution mask by adding, at every decoder scale, an upsampled decoder feature to the encoder feature of the same resolution. This addition transports target evidence, its surroundings, and undecided evidence with the same weight, leaving the decoder to separate them at the boundary. Earlier selective designs aggregate neighbours without normalising by the weight that reached a location, and give the undecided state no operational role. We treat skip fusion as a vote. A controller formed once on the deepest convolutional feature assigns each cell a polarity and an abstention; the abstention has no target and is shaped only by its usefulness for routing. At every decoder scale, commitment-weighted normalised convolution forms a foreground and a background consensus over committed neighbours, locally and image-wide, and the abstention routes the evidence to one of two small experts. Every component is the identity at initialisation; the skip is never gated. It adds $0.39$ million parameters, $16\%$ more multiply--accumulate operations and $43\%$ more inference latency, to a compact Kolmogorov--Arnold encoder--decoder. We evaluate it on ultrasound, gland histology, and two colonoscopy collections under identical splits, budgets, and seeds. Against the re-trained backbone, three-seed mean test intersection over union changes by $+0.36$ on glands; \STALE{on the polyp collections and ultrasound the previous-protocol means are $+0.62$, $+2.10$ and $-0.45$ and will be replaced.} \STALE{Ablations (previous protocol): removing the no-decision state costs 0.7 points while fixing it to the full margin costs none.} A soft third routing state, not a learned one, is what makes the routing useful.
 \end{abstract}
 
 \begin{IEEEkeywords}
 Abstention, evidence routing, medical image segmentation, normalised convolution, skip connections.
 \end{IEEEkeywords}
+
+\noindent\textcolor{red}{Transition draft (2026-09-05). The evaluation has been moved to an $80/10/10$ protocol with a test partition never used for training or model selection. GlaS results below are test-partition values. Red-marked numbers are values from the previous $80/20$ protocol that will be replaced as the corresponding re-training runs finish.}
 
 \input{sections_v2/01_introduction}
 \input{sections_v2/02_related_work}
